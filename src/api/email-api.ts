@@ -60,6 +60,18 @@ async function getServerEmails(): Promise<Email[]> {
   return payload
 }
 
+async function getResponseError(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload: unknown = await response.json()
+    if (typeof payload === 'object' && payload !== null && 'error' in payload && typeof payload.error === 'string') {
+      return payload.error
+    }
+  } catch {
+    // Use the status-based message when the server did not return JSON.
+  }
+  return fallback
+}
+
 export const emailApi: EmailApi = {
   async list() {
     const stored = readStoredEmails()
@@ -70,7 +82,9 @@ export const emailApi: EmailApi = {
   },
   async sync() {
     const response = await fetch('/api/emails/sync', { method: 'POST' })
-    if (!response.ok) throw new Error(`Could not check for new mail (HTTP ${response.status}).`)
+    if (!response.ok) {
+      throw new Error(await getResponseError(response, `Could not check for new mail (HTTP ${response.status}).`))
+    }
     const payload: unknown = await response.json()
     if (payload === null) return null
     if (!isEmail(payload)) throw new Error('The email service returned an invalid message.')

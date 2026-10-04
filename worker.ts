@@ -1,16 +1,25 @@
 import { Hono } from 'hono'
-import { createSeedEmails, createRandomSyncedEmail } from './src/mock-emails'
+import { generateAzureEmail, isAzureEmailConfigured, type AzureEmailEnvironment } from './src/azure-email'
+import { createSeedEmails } from './src/mock-emails'
 
 type Env = {
   Bindings: {
     ASSETS: Fetcher
-  }
+  } & AzureEmailEnvironment
 }
 
 const app = new Hono<Env>()
 
 app.get('/api/emails', (context) => context.json(createSeedEmails()))
-app.post('/api/emails/sync', (context) => context.json(createRandomSyncedEmail()))
+app.post('/api/emails/sync', async (context) => {
+  if (!isAzureEmailConfigured(context.env)) {
+    return context.json(
+      { error: 'Azure AI is not configured. Add the AZURE_OPENAI_API_KEY Worker secret.' },
+      503,
+    )
+  }
+  return context.json(await generateAzureEmail(context.env))
+})
 app.get('/api/health', (context) => context.json({ status: 'ok', source: 'mock' }))
 
 app.all('*', async (context) => {

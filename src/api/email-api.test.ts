@@ -63,6 +63,14 @@ describe('email API', () => {
     expect(await emailApi.list()).toHaveLength(11)
   })
 
+  it('shows configuration errors returned by the email-generation service', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({ error: 'Azure AI is not configured.' }, { status: 503 }),
+    )
+
+    await expect(emailApi.sync()).rejects.toThrow('Azure AI is not configured.')
+  })
+
   it('randomly returns emails from all categories or no email', () => {
     const sequence = (...values: number[]) => () => values.shift() ?? 0
 
