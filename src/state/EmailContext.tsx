@@ -1,7 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { emailApi } from '../api/email-api'
-import type { Email } from '../email-model'
+import type { Email, EmailCategory } from '../email-model'
+
+const emailCategories: EmailCategory[] = ['attention', 'worth-knowing', 'no-action']
+
+function nextCategoryToFill(emails: Email[]): EmailCategory {
+  const counts: Record<EmailCategory, number> = {
+    attention: 0,
+    'worth-knowing': 0,
+    'no-action': 0,
+  }
+  for (const email of emails) counts[email.category] += 1
+
+  return emailCategories.reduce((leastCommon, category) =>
+    counts[category] < counts[leastCommon] ? category : leastCommon,
+  )
+}
 
 type EmailContextValue = {
   emails: Email[]
@@ -12,6 +27,8 @@ type EmailContextValue = {
   clearNotice: () => void
   refreshInbox: () => Promise<void>
   syncInbox: () => Promise<void>
+  clearInbox: () => Promise<void>
+  restoreInbox: () => Promise<void>
   updateEmail: (emailId: string, patch: Partial<Pick<Email, 'actionRequired' | 'reminderState' | 'reminderDate'>>) => Promise<void>
 }
 
@@ -47,7 +64,7 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     setError(null)
     setNotice(null)
     try {
-      const email = await emailApi.sync()
+      const email = await emailApi.sync(nextCategoryToFill(emails))
       if (!email) {
         setNotice('No new emails — your inbox is all caught up.')
         return
@@ -58,6 +75,28 @@ export function EmailProvider({ children }: { children: ReactNode }) {
       setError(cause instanceof Error ? cause.message : 'New email could not be checked.')
     } finally {
       setSyncing(false)
+    }
+  }, [emails])
+
+  const clearInbox = useCallback(async () => {
+    setError(null)
+    setNotice(null)
+    try {
+      setEmails(await emailApi.clear())
+      setNotice('Your inbox has been cleared.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The inbox could not be cleared.')
+    }
+  }, [])
+
+  const restoreInbox = useCallback(async () => {
+    setError(null)
+    setNotice(null)
+    try {
+      setEmails(await emailApi.restore())
+      setNotice('The starter demo emails have been restored.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The starter inbox could not be restored.')
     }
   }, [])
 
@@ -72,8 +111,8 @@ export function EmailProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, updateEmail }),
-    [emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, updateEmail],
+    () => ({ emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, clearInbox, restoreInbox, updateEmail }),
+    [emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, clearInbox, restoreInbox, updateEmail],
   )
   return <EmailContext.Provider value={value}>{children}</EmailContext.Provider>
 }

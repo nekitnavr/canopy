@@ -1,10 +1,12 @@
-import type { Email } from '../email-model'
+import type { Email, EmailCategory } from '../email-model'
 
 const STORAGE_KEY = 'canopy.emails.v2'
 
 export interface EmailApi {
   list(): Promise<Email[]>
-  sync(): Promise<Email | null>
+  sync(category?: EmailCategory): Promise<Email | null>
+  clear(): Promise<Email[]>
+  restore(): Promise<Email[]>
   update(emailId: string, patch: Partial<Pick<Email, 'actionRequired' | 'reminderState' | 'reminderDate'>>): Promise<Email[]>
 }
 
@@ -80,8 +82,9 @@ export const emailApi: EmailApi = {
     saveEmails(emails)
     return emails
   },
-  async sync() {
-    const response = await fetch('/api/emails/sync', { method: 'POST' })
+  async sync(category) {
+    const query = category ? `?category=${category}` : ''
+    const response = await fetch(`/api/emails/sync${query}`, { method: 'POST' })
     if (!response.ok) {
       throw new Error(await getResponseError(response, `Could not check for new mail (HTTP ${response.status}).`))
     }
@@ -92,6 +95,15 @@ export const emailApi: EmailApi = {
     if (!emails) throw new Error('The inbox has not loaded yet. Try checking for new mail again.')
     saveEmails([payload, ...emails])
     return payload
+  },
+  async clear() {
+    saveEmails([])
+    return []
+  },
+  async restore() {
+    const emails = await getServerEmails()
+    saveEmails(emails)
+    return emails
   },
   async update(emailId, patch) {
     const emails = readStoredEmails()

@@ -48,11 +48,12 @@ describe('email API', () => {
 
   it('adds messages returned by the sync API to the same inbox', async () => {
     await emailApi.list()
-    const added = await emailApi.sync()
+    const added = await emailApi.sync('worth-knowing')
     const refreshed = await emailApi.list()
 
     expect(refreshed).toHaveLength(12)
     expect(refreshed[0]).toEqual(added)
+    expect(fetch).toHaveBeenCalledWith('/api/emails/sync?category=worth-knowing', { method: 'POST' })
   })
 
   it('leaves the inbox unchanged when the sync API has no new email', async () => {
@@ -61,6 +62,22 @@ describe('email API', () => {
 
     expect(await emailApi.sync()).toBeNull()
     expect(await emailApi.list()).toHaveLength(11)
+  })
+
+  it('clears and persists an empty inbox', async () => {
+    await emailApi.list()
+
+    expect(await emailApi.clear()).toEqual([])
+    expect(await emailApi.list()).toEqual([])
+  })
+
+  it('restores and persists the starter inbox', async () => {
+    await emailApi.clear()
+
+    const restored = await emailApi.restore()
+
+    expect(restored).toHaveLength(11)
+    expect(await emailApi.list()).toEqual(restored)
   })
 
   it('shows configuration errors returned by the email-generation service', async () => {

@@ -35,6 +35,23 @@ const informationKinds: NonNullable<ExtractedInformation['kind']>[] = [
   'event',
   'other',
 ]
+function emailGenerationInstructions(category: EmailCategory): string {
+  return [
+    'Generate one fictional email for a personal inbox demo. Do not use real people or personal data.',
+    'Return only a valid JSON object with exactly these fields:',
+    'sender, senderEmail, subject, summary, category, relevanceScore, urgencyScore, actionRequired,',
+    'keyInformation, extractedInformation, originalContent, recommendedAction.',
+    '"attention" means a timely action is genuinely required, such as paying a bill or meeting a near deadline.',
+    '"worth-knowing" means useful, personally relevant information with no urgent required action, such as an optional event or community update.',
+    '"no-action" means a routine notification or information that does not meaningfully need the recipient’s attention.',
+    `For this email, category MUST be "${category}". Do not substitute another category.`,
+    `Set actionRequired to ${category === 'attention'}; attention emails should describe a clear, timely action the recipient needs to take.`,
+    'category must be "attention", "worth-knowing", or "no-action". Scores must be numbers from 0 to 100.',
+    'keyInformation must be an array of strings. extractedInformation must be an array of objects with',
+    'label, value, and optional kind ("deadline", "amount", "eligibility", "event", or "other").',
+    'Use ISO YYYY-MM-DD values for extracted deadlines and event dates. Do not wrap the JSON in markdown.',
+  ].join(' ')
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -48,7 +65,7 @@ function isStringArray(value: unknown, maxItems: number, maxLength: number): val
   return Array.isArray(value) && value.length <= maxItems && value.every((item) => isText(item, maxLength))
 }
 
-function isEmailCategory(value: unknown): value is EmailCategory {
+export function isEmailCategory(value: unknown): value is EmailCategory {
   return categories.some((category) => category === value)
 }
 
@@ -114,31 +131,25 @@ export function isAzureEmailConfigured(env: AzureEmailEnvironment): env is Confi
   return Boolean(env.AZURE_OPENAI_API_KEY?.trim())
 }
 
-export async function generateAzureEmail(env: AzureEmailEnvironment): Promise<Email> {
+export async function generateAzureEmail(env: AzureEmailEnvironment, requestedCategory?: EmailCategory): Promise<Email> {
   if (!isAzureEmailConfigured(env)) {
     throw new Error('Azure AI is not configured. Add the AZURE_OPENAI_API_KEY Worker secret.')
   }
 
+  const category = requestedCategory ?? categories[Math.floor(Math.random() * categories.length)]
   const openAIClient = new OpenAI({
     apiKey: env.AZURE_OPENAI_API_KEY,
     baseURL: azureOpenAIBaseUrl,
   })
   const response = await openAIClient.responses.create({
     model: deploymentName,
-    input: [
-      'Generate one fictional email for a personal inbox demo. Do not use real people or personal data.',
-      'Return only a valid JSON object with exactly these fields:',
-      'sender, senderEmail, subject, summary, category, relevanceScore, urgencyScore, actionRequired,',
-      'keyInformation, extractedInformation, originalContent, recommendedAction.',
-      'category must be "attention", "worth-knowing", or "no-action". Scores must be numbers from 0 to 100.',
-      'keyInformation must be an array of strings. extractedInformation must be an array of objects with',
-      'label, value, and optional kind ("deadline", "amount", "eligibility", "event", or "other").',
-      'Use ISO YYYY-MM-DD values for extracted deadlines and event dates. Do not wrap the JSON in markdown.',
-    ].join(' '),
+    input: emailGenerationInstructions(category),
   })
   const generated = parseGeneratedEmail(response.output_text)
   return {
     ...generated,
+    category,
+    actionRequired: category === 'attention',
     id: `email-${crypto.randomUUID()}`,
     receivedAt: new Date().toISOString(),
     reminderState: 'none',

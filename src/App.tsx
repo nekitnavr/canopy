@@ -15,8 +15,10 @@ import {
     Mail,
     Plus,
     RefreshCw,
+    RotateCcw,
     ShieldCheck,
     Sparkles,
+    Trash2,
     ThumbsDown,
     ThumbsUp,
     X,
@@ -49,8 +51,10 @@ function initials(name: string): string {
 
 function App() {
     const location = useLocation()
-    const { syncing, syncInbox, error, notice, clearNotice } = useEmailData()
+    const { syncing, syncInbox, clearInbox, restoreInbox, emails, loading, error, notice, clearNotice } = useEmailData()
+    const [confirmClear, setConfirmClear] = useState(false)
     const onDetail = location.pathname.startsWith('/email/')
+    const onInbox = location.pathname === '/'
 
     return (
         <div className="app-shell">
@@ -99,6 +103,30 @@ function App() {
                         <strong>{onDetail ? 'Email details' : location.pathname === '/agenda' ? 'Agenda' : 'Inbox'}</strong>
                     </div>
                     <div className="topbar-right">
+                        {onInbox && !loading && emails.length === 0 && (
+                            <button
+                                type="button"
+                                className="button restore-inbox-button"
+                                onClick={() => void restoreInbox()}
+                                disabled={syncing}
+                            >
+                                <RotateCcw size={15} />
+                                <span>Restore demo inbox</span>
+                            </button>
+                        )}
+                        {onInbox && (
+                            <button
+                                type="button"
+                                className="button clear-inbox-button"
+                                onClick={() => setConfirmClear(true)}
+                                disabled={syncing || emails.length === 0}
+                                aria-label="Clear inbox"
+                                title="Clear inbox"
+                            >
+                                <Trash2 size={15} />
+                                <span>Clear inbox</span>
+                            </button>
+                        )}
                         <span className="sync-status">
                             <span /> Demo inbox
                         </span>
@@ -126,6 +154,44 @@ function App() {
                         <button type="button" onClick={clearNotice} aria-label="Dismiss message">
                             <X size={14} />
                         </button>
+                    </div>
+                )}
+                {confirmClear && (
+                    <div
+                        className="dialog-backdrop"
+                        role="presentation"
+                        onMouseDown={(event) => {
+                            if (event.target === event.currentTarget) setConfirmClear(false)
+                        }}
+                    >
+                        <section
+                            className="original-dialog clear-confirm-dialog"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="clear-inbox-title"
+                        >
+                            <div className="dialog-heading">
+                                <div>
+                                    <span className="dialog-kicker">INBOX</span>
+                                    <h2 id="clear-inbox-title">Clear your inbox?</h2>
+                                </div>
+                            </div>
+                            <p>All current emails will be removed. You can restore the starter demo inbox afterward.</p>
+                            <div className="clear-dialog-actions">
+                                <button className="button button-outline" onClick={() => setConfirmClear(false)}>
+                                    Cancel
+                                </button>
+                                <button
+                                    className="button clear-confirm-action"
+                                    onClick={() => {
+                                        setConfirmClear(false)
+                                        void clearInbox()
+                                    }}
+                                >
+                                    <Trash2 size={15} /> Clear all emails
+                                </button>
+                            </div>
+                        </section>
                     </div>
                 )}
                 <main className="page-content">
@@ -281,7 +347,6 @@ function AttentionCard({ email }: { email: Email }) {
             <span className="attention-card-main">
                 <span className="card-meta">
                     <strong>{email.sender}</strong>
-                    <span>{formatReceivedAt(email.receivedAt)}</span>
                 </span>
                 <span className="email-subject">{email.subject}</span>
                 <span className="email-summary">{email.summary}</span>
@@ -301,12 +366,10 @@ function AttentionCard({ email }: { email: Email }) {
                         <CalendarDays size={12} /> Reminder
                     </span>
                 )}
-                {dateFact && (
-                    <span className="deadline-chip">
-                        <Clock3 size={12} />
-                        {formatDate(dateFact.value)}
-                    </span>
-                )}
+                <span className="deadline-chip">
+                    <Clock3 size={12} />
+                    {dateFact ? formatDate(dateFact.value) : formatReceivedAt(email.receivedAt)}
+                </span>
                 <ChevronRight size={17} className="card-chevron" />
             </span>
         </Link>

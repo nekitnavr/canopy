@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { generateAzureEmail, isAzureEmailConfigured, type AzureEmailEnvironment } from './src/azure-email'
+import { generateAzureEmail, isAzureEmailConfigured, isEmailCategory, type AzureEmailEnvironment } from './src/azure-email'
 import { createSeedEmails } from './src/mock-emails'
 
 type Env = {
@@ -18,7 +18,9 @@ app.post('/api/emails/sync', async (context) => {
       503,
     )
   }
-  return context.json(await generateAzureEmail(context.env))
+  const requestedCategory = context.req.query('category')
+  const category = isEmailCategory(requestedCategory) ? requestedCategory : undefined
+  return context.json(await generateAzureEmail(context.env, category))
 })
 app.get('/api/health', (context) => context.json({ status: 'ok', source: 'mock' }))
 

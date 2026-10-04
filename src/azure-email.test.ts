@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { isAzureEmailConfigured, parseGeneratedEmail } from './azure-email'
+import { describe, expect, it, vi } from 'vitest'
+import { isAzureEmailConfigured, parseGeneratedEmail, generateAzureEmail } from './azure-email'
+
+const { responsesCreate } = vi.hoisted(() => ({ responsesCreate: vi.fn() }))
+
+vi.mock('openai', () => ({
+  default: class {
+    responses = { create: responsesCreate }
+  },
+}))
 
 const generatedEmail = {
   sender: 'Northstar Foundation',
@@ -17,6 +25,24 @@ const generatedEmail = {
 }
 
 describe('Azure email generation', () => {
+  it('generates emails across attention and worth-knowing categories', async () => {
+    const random = vi.spyOn(Math, 'random')
+    responsesCreate.mockResolvedValueOnce({ output_text: JSON.stringify(generatedEmail) })
+    responsesCreate.mockResolvedValueOnce({
+      output_text: JSON.stringify({ ...generatedEmail, category: 'attention', actionRequired: true }),
+    })
+
+    random.mockReturnValueOnce(0.1).mockReturnValueOnce(0.5)
+    const important = await generateAzureEmail({ AZURE_OPENAI_API_KEY: 'key' })
+    const worthKnowing = await generateAzureEmail({ AZURE_OPENAI_API_KEY: 'key' })
+
+    expect(important).toMatchObject({ category: 'attention', actionRequired: true })
+    expect(worthKnowing).toMatchObject({ category: 'worth-knowing', actionRequired: false })
+    expect(responsesCreate.mock.calls[0][0].input).toContain('category MUST be "attention"')
+    expect(responsesCreate.mock.calls[1][0].input).toContain('category MUST be "worth-knowing"')
+    random.mockRestore()
+  })
+
   it('accepts complete, schema-valid agent output', () => {
     expect(parseGeneratedEmail(JSON.stringify(generatedEmail))).toEqual(generatedEmail)
   })
