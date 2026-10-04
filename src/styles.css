@@ -68,6 +68,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(51, 120, 96, .35
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error-banner { display: flex; align-items: center; gap: 9px; margin: 18px 5.2% 0; padding: 11px 13px; border: 1px solid #efd2cc; border-radius: 8px; background: #fff6f4; color: #994b41; font-size: 12px; }
+.sync-notice { display: flex; align-items: center; gap: 8px; margin: 18px 5.2% 0; padding: 10px 12px; border: 1px solid #dfe9df; border-radius: 8px; background: #f2f7f1; color: #53765d; font-size: 11px; }
+.sync-notice > span { flex: 1; }
+.sync-notice > button { display: grid; width: 23px; height: 23px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.sync-notice > button:hover { background: #e8f0e6; }
 .page-content { width: min(1050px, 100%); flex: 1; margin: 0 auto; padding: 37px 5.2% 66px; }
 .page-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 5.2% 19px; border-top: 1px solid #e9eae5; color: #a3a49d; font-size: 9px; }
 .page-footer span:last-child { display: inline-flex; align-items: center; gap: 5px; }
@@ -186,6 +190,13 @@ h1 { margin-bottom: 7px; color: #292d27; font: 600 32px/1.2 'Manrope', sans-seri
 .sparkle-small { color: #81957e; }
 .action-card h2 { margin: 13px 0 7px; color: #42463e; font: 600 14px 'Manrope', sans-serif; letter-spacing: -.2px; }
 .action-card > p { margin: 0; color: #777a72; font-size: 10px; line-height: 1.65; }
+.adapt-feedback { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.adapt-trigger { padding: 0; border: 0; background: transparent; color: #708775; font-size: 9px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.adapt-trigger:hover { color: #375e45; }
+.adapt-options { display: flex; align-items: center; gap: 5px; }
+.adapt-options button { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid #e7eae4; border-radius: 7px; background: #fff; color: #858b80; cursor: pointer; }
+.adapt-options button:hover { border-color: #d4dfd3; background: #f7faf6; color: #54775c; }
+.adapt-options button:last-child:hover { border-color: #eedbd6; background: #fff8f6; color: #b66b61; }
 .action-status { display: flex; align-items: center; gap: 6px; margin: 14px 0 15px; color: #af665d; font-size: 9px; font-weight: 600; }
 .action-status > span { width: 6px; height: 6px; border-radius: 50%; background: #d77b71; }
 .action-status.status-done { color: #528060; }

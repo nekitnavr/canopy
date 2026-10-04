@@ -1,10 +1,10 @@
 import type { Email } from '../email-model'
 
-const STORAGE_KEY = 'mailmind.emails.v1'
+const STORAGE_KEY = 'canopy.emails.v2'
 
 export interface EmailApi {
   list(): Promise<Email[]>
-  sync(): Promise<Email>
+  sync(): Promise<Email | null>
   update(emailId: string, patch: Partial<Pick<Email, 'actionRequired' | 'reminderState' | 'reminderDate'>>): Promise<Email[]>
 }
 
@@ -72,6 +72,7 @@ export const emailApi: EmailApi = {
     const response = await fetch('/api/emails/sync', { method: 'POST' })
     if (!response.ok) throw new Error(`Could not check for new mail (HTTP ${response.status}).`)
     const payload: unknown = await response.json()
+    if (payload === null) return null
     if (!isEmail(payload)) throw new Error('The email service returned an invalid message.')
     const emails = readStoredEmails()
     if (!emails) throw new Error('The inbox has not loaded yet. Try checking for new mail again.')

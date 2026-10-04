@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emailApi } from './email-api'
-import { createSeedEmails, createSyncedEmail } from '../mock-emails'
+import { createRandomSyncedEmail, createSeedEmails, createSyncedEmail } from '../mock-emails'
 
 const values = new Map<string, string>()
 const localStorage = {
@@ -12,9 +12,9 @@ beforeEach(() => {
   values.clear()
   vi.stubGlobal('window', { localStorage })
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-    const path = new URL(String(input), 'https://mailmind.test').pathname
+    const path = new URL(String(input), 'https://canopy.test').pathname
     return path === '/api/emails/sync'
-      ? Response.json(createSyncedEmail())
+      ? Response.json(createSyncedEmail('worth-knowing'))
       : Response.json(createSeedEmails())
   }))
 })
@@ -27,6 +27,7 @@ describe('email API', () => {
     const restored = await emailApi.list()
 
     expect(initial).toHaveLength(11)
+    expect(initial.every((email) => email.reminderState === 'none')).toBe(true)
     expect(restored).toEqual(initial)
     expect(fetch).toHaveBeenCalledTimes(1)
   })
@@ -52,5 +53,22 @@ describe('email API', () => {
 
     expect(refreshed).toHaveLength(12)
     expect(refreshed[0]).toEqual(added)
+  })
+
+  it('leaves the inbox unchanged when the sync API has no new email', async () => {
+    await emailApi.list()
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(null))
+
+    expect(await emailApi.sync()).toBeNull()
+    expect(await emailApi.list()).toHaveLength(11)
+  })
+
+  it('randomly returns emails from all categories or no email', () => {
+    const sequence = (...values: number[]) => () => values.shift() ?? 0
+
+    expect(createRandomSyncedEmail(() => 0.1)).toBeNull()
+    expect(createRandomSyncedEmail(sequence(0.9, 0))?.category).toBe('attention')
+    expect(createRandomSyncedEmail(sequence(0.9, 0.5))?.category).toBe('worth-knowing')
+    expect(createRandomSyncedEmail(sequence(0.9, 0.99))?.category).toBe('no-action')
   })
 })

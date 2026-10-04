@@ -1,4 +1,4 @@
-import type { Email } from './email-model'
+import type { Email, EmailCategory } from './email-model'
 
 function dateInDays(days: number): string {
   const date = new Date()
@@ -26,7 +26,7 @@ export function createSeedEmails(): Email[] {
       ],
       originalContent: 'Hi Alex,\n\nA quick reminder that your Northstar Community Impact Grant application is due soon. We have saved your draft, but we are still missing your finalized project budget and a signed board support letter.\n\nApplications must be submitted by 5:00 PM local time on the deadline date. Eligible applicants are registered nonprofit organizations serving local communities. Awards range from $5,000 to $24,000.\n\nYou can return to your application at any time before the deadline. We are looking forward to learning more about your work.\n\nWarmly,\nNorthstar Foundation Grants Team',
       recommendedAction: 'Upload the finalized project budget and signed board letter before the deadline.',
-      receivedAt: receivedAt(1), reminderState: 'added', reminderDate: dateInDays(3),
+      receivedAt: receivedAt(1), reminderState: 'none', reminderDate: null,
     },
     {
       id: 'health-enrollment', sender: 'Meridian Health', senderEmail: 'benefits@meridianhealth.com',
@@ -56,7 +56,7 @@ export function createSeedEmails(): Email[] {
       ],
       originalContent: 'Hi Alex,\n\nYour City Energy statement is ready. The amount due is $184.60, payable by the date shown on your statement. AutoPay is currently off, so please make a payment through your online account or the City Energy app.\n\nThank you,\nCity Energy Billing',
       recommendedAction: 'Pay the $184.60 balance or turn on AutoPay before the due date.',
-      receivedAt: receivedAt(7), reminderState: 'added', reminderDate: dateInDays(2),
+      receivedAt: receivedAt(7), reminderState: 'none', reminderDate: null,
     },
     {
       id: 'school-event', sender: 'Riverside Community School', senderEmail: 'events@riverside.school',
@@ -169,27 +169,81 @@ export function createSeedEmails(): Email[] {
   ]
 }
 
-export function createSyncedEmail(): Email {
-  return {
+export function createSyncedEmail(category: EmailCategory): Email {
+  const shared = {
     id: `email-${crypto.randomUUID()}`,
-    sender: 'Goodwell Community',
-    senderEmail: 'programs@goodwell.example',
-    subject: 'New community garden volunteer dates',
-    summary: 'Goodwell has opened sign-ups for two upcoming neighborhood garden mornings.',
-    category: 'worth-knowing',
-    relevanceScore: 76,
-    urgencyScore: 36,
-    actionRequired: false,
-    keyInformation: ['Two upcoming dates', 'No experience needed', 'Tools provided'],
-    extractedInformation: [
-      { label: 'First volunteer morning', value: dateInDays(14), kind: 'event' },
-      { label: 'Second volunteer morning', value: dateInDays(21), kind: 'event' },
-      { label: 'What to bring', value: 'Closed-toe shoes', kind: 'other' },
-    ],
-    originalContent: 'Hello neighbors,\n\nWe have opened sign-ups for two upcoming community garden mornings. No gardening experience is needed, and all tools are provided. Please bring closed-toe shoes and a water bottle.\n\nChoose whichever Saturday works best for you in the volunteer portal.\n\nGoodwell Community',
-    recommendedAction: 'Pick a volunteer morning if you would like to join.',
     receivedAt: new Date().toISOString(),
-    reminderState: 'none',
-    reminderDate: null,
+    reminderState: 'none' as const,
+    reminderDate: null as string | null,
   }
+
+  if (category === 'attention') {
+    return {
+      ...shared,
+      sender: 'Brightline Utilities',
+      senderEmail: 'billing@brightline.example',
+      subject: 'A payment of $126.40 is due tomorrow',
+      summary: 'Your latest utility payment is coming due, and automatic payments are turned off.',
+      category,
+      relevanceScore: 92,
+      urgencyScore: 94,
+      actionRequired: true,
+      keyInformation: ['$126.40 due', 'Payment due tomorrow', 'AutoPay is off'],
+      extractedInformation: [
+        { label: 'Amount due', value: '$126.40', kind: 'amount' },
+        { label: 'Payment deadline', value: dateInDays(1), kind: 'deadline' },
+        { label: 'AutoPay', value: 'Off', kind: 'other' },
+      ],
+      originalContent: 'Hello Alex,\n\nYour Brightline Utilities balance of $126.40 is due tomorrow. AutoPay is currently off for your account. Please make a payment through your account portal to avoid a late fee.\n\nBrightline Billing',
+      recommendedAction: 'Pay the $126.40 balance before tomorrow’s deadline.',
+    }
+  }
+
+  if (category === 'worth-knowing') {
+    return {
+      ...shared,
+      sender: 'Goodwell Community',
+      senderEmail: 'programs@goodwell.example',
+      subject: 'New community garden volunteer dates',
+      summary: 'Goodwell has opened sign-ups for two upcoming neighborhood garden mornings.',
+      category,
+      relevanceScore: 76,
+      urgencyScore: 36,
+      actionRequired: false,
+      keyInformation: ['Two upcoming dates', 'No experience needed', 'Tools provided'],
+      extractedInformation: [
+        { label: 'First volunteer morning', value: dateInDays(14), kind: 'event' },
+        { label: 'Second volunteer morning', value: dateInDays(21), kind: 'event' },
+        { label: 'What to bring', value: 'Closed-toe shoes', kind: 'other' },
+      ],
+      originalContent: 'Hello neighbors,\n\nWe have opened sign-ups for two upcoming community garden mornings. No gardening experience is needed, and all tools are provided. Please bring closed-toe shoes and a water bottle.\n\nChoose whichever Saturday works best for you in the volunteer portal.\n\nGoodwell Community',
+      recommendedAction: 'Pick a volunteer morning if you would like to join.',
+    }
+  }
+
+  return {
+    ...shared,
+    sender: 'Parcel Post',
+    senderEmail: 'updates@parcelpost.example',
+    subject: 'Your parcel was delivered',
+    summary: 'Your order was left in the secure lobby parcel room.',
+    category,
+    relevanceScore: 38,
+    urgencyScore: 15,
+    actionRequired: false,
+    keyInformation: ['Delivered at 11:42 AM', 'Secure lobby parcel room'],
+    extractedInformation: [
+      { label: 'Delivery status', value: 'Delivered', kind: 'other' },
+      { label: 'Location', value: 'Lobby parcel room', kind: 'other' },
+    ],
+    originalContent: 'Your Parcel Post delivery has arrived and was placed in the secure lobby parcel room at 11:42 AM. No signature was needed.\n\nThank you for using Parcel Post.',
+    recommendedAction: 'No action needed.',
+  }
+}
+
+export function createRandomSyncedEmail(random: () => number = Math.random): Email | null {
+  if (random() < 0.3) return null
+  const categories: EmailCategory[] = ['attention', 'worth-knowing', 'no-action']
+  const category = categories[Math.floor(random() * categories.length)]
+  return createSyncedEmail(category)
 }

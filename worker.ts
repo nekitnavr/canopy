@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { createSeedEmails, createSyncedEmail } from './src/mock-emails'
+import { createSeedEmails, createRandomSyncedEmail } from './src/mock-emails'
 
 type Env = {
   Bindings: {
@@ -10,7 +10,7 @@ type Env = {
 const app = new Hono<Env>()
 
 app.get('/api/emails', (context) => context.json(createSeedEmails()))
-app.post('/api/emails/sync', (context) => context.json(createSyncedEmail()))
+app.post('/api/emails/sync', (context) => context.json(createRandomSyncedEmail()))
 app.get('/api/health', (context) => context.json({ status: 'ok', source: 'mock' }))
 
 app.all('*', async (context) => {

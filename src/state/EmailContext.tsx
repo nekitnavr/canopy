@@ -8,6 +8,8 @@ type EmailContextValue = {
   loading: boolean
   syncing: boolean
   error: string | null
+  notice: string | null
+  clearNotice: () => void
   refreshInbox: () => Promise<void>
   syncInbox: () => Promise<void>
   updateEmail: (emailId: string, patch: Partial<Pick<Email, 'actionRequired' | 'reminderState' | 'reminderDate'>>) => Promise<void>
@@ -20,6 +22,7 @@ export function EmailProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const refreshInbox = useCallback(async () => {
     setLoading(true)
@@ -33,6 +36,8 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const clearNotice = useCallback(() => setNotice(null), [])
+
   useEffect(() => {
     void refreshInbox()
   }, [refreshInbox])
@@ -40,9 +45,15 @@ export function EmailProvider({ children }: { children: ReactNode }) {
   const syncInbox = useCallback(async () => {
     setSyncing(true)
     setError(null)
+    setNotice(null)
     try {
-      await emailApi.sync()
+      const email = await emailApi.sync()
+      if (!email) {
+        setNotice('No new emails — your inbox is all caught up.')
+        return
+      }
       setEmails(await emailApi.list())
+      setNotice('A new email has been added to your inbox.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'New email could not be checked.')
     } finally {
@@ -52,6 +63,7 @@ export function EmailProvider({ children }: { children: ReactNode }) {
 
   const updateEmail = useCallback<EmailContextValue['updateEmail']>(async (emailId, patch) => {
     setError(null)
+    setNotice(null)
     try {
       setEmails(await emailApi.update(emailId, patch))
     } catch (cause) {
@@ -60,8 +72,8 @@ export function EmailProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ emails, loading, syncing, error, refreshInbox, syncInbox, updateEmail }),
-    [emails, loading, syncing, error, refreshInbox, syncInbox, updateEmail],
+    () => ({ emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, updateEmail }),
+    [emails, loading, syncing, error, notice, clearNotice, refreshInbox, syncInbox, updateEmail],
   )
   return <EmailContext.Provider value={value}>{children}</EmailContext.Provider>
 }
